@@ -1,6 +1,5 @@
 import { useState } from "react";
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { useFetcher } from "@remix-run/react";
+import type { ActionFunctionArgs } from "@remix-run/node";
 import {
   Page,
   Button,
@@ -11,12 +10,7 @@ import {
 } from "@shopify/polaris";
 import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
-
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
-
-  return null;
-};
+import { useFetcher } from "@remix-run/react";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
@@ -93,26 +87,21 @@ export default function Index() {
   const [value, setValue] = useState("test");
 
   const shopify = useAppBridge();
-  // const isLoading =
-  //   ["loading", "submitting"].includes(fetcher.state) &&
-  //   fetcher.formMethod === "POST";
-  // const productId = fetcher.data?.product?.id.replace(
-  //   "gid://shopify/Product/",
-  //   "",
-  // );
 
-  // useEffect(() => {
-  //   if (productId) {
-  //     shopify.toast.show("Product created");
-  //   }
-  // }, [productId, shopify]);
   const generateProduct = () => fetcher.submit({}, { method: "POST" });
 
-  async function openResourcePicker() {
-    const selectedProducts = await shopify.resourcePicker({ type: 'product' });
+  const saveCustomField = () => fetcher.submit({
+    id: value,
+  }, { method: "POST" });
 
-    console.log(selectedProducts); // Array of selected products
-    setPickedResources(selectedProducts);
+  async function openResourcePicker() {
+    const selectedProducts = await shopify.resourcePicker({ type: 'product', multiple: true });
+
+    const productIds = selectedProducts?.map((p) => p.id);
+    console.log('Selected product IDs:', productIds);
+
+    setPickedResources(productIds);
+
   }
 
   const handleChange = (newValue: string) => {
@@ -127,36 +116,26 @@ export default function Index() {
         </button>
       </TitleBar>
       <Card>
+
         <BlockStack gap="500">
           <Box maxWidth="200px">
             <Button onClick={openResourcePicker}>
               Select Products
             </Button>
           </Box>
-          <Box width="500px">
+          <BlockStack gap="200">
             <TextField
-              maxLength={30}
+              maxLength={20}
               label="Enter Custom value"
               value={value}
               onChange={handleChange}
               autoComplete="off"
+              max={20}
             />
-          </Box>
-          {/* {pickedResources && ( */}
-          {/*   <Box */}
-          {/*     minHeight="400" */}
-          {/*     padding="400" */}
-          {/*     background="bg-surface-active" */}
-          {/*     borderWidth="025" */}
-          {/*     borderRadius="200" */}
-          {/*     borderColor="border" */}
-          {/*     overflowX="scroll" */}
-          {/*   > */}
-          {/*     test */}
-          {/*     {/* {pickedResources.images[0].altText} */}
-          {/*     <img src={pickedResources[0].images[0].originalSrc} alt={pickedResources.images[0].altText} className="" /> */}
-          {/*   </Box> */}
-          {/**/}
+            <Box maxWidth="50px">
+              <Button variant="primary" onClick={saveCustomField} loading={fetcher.state == 'submitting'}>Save</Button>
+            </Box>
+          </BlockStack>
           {
             pickedResources && (
               <Box
@@ -178,6 +157,6 @@ export default function Index() {
           }
         </BlockStack>
       </Card>
-    </Page >
+    </Page>
   );
 }
