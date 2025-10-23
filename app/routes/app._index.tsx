@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ActionFunctionArgs } from "@remix-run/node";
 import {
   Page,
@@ -7,6 +7,7 @@ import {
   Box,
   TextField,
   Card,
+  Banner,
 } from "@shopify/polaris";
 import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
@@ -81,21 +82,35 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   };
 };
 
+type MetafieldResponse =
+  | { message: string }
+  | { error: string };
+
 export default function Index() {
-  const fetcher = useFetcher<typeof action>();
+  const generateProductFetcher = useFetcher<typeof action>();
+  const saveCustomFieldFetcher = useFetcher<MetafieldResponse>();
+
   const [pickedResources, setPickedResources] = useState<any>({});
-  const [value, setValue] = useState("test");
+  const [showBanner, setShowBanner] = useState(true);
+  const [value, setValue] = useState("");
 
   const shopify = useAppBridge();
 
-  const generateProduct = () => fetcher.submit({}, { method: "POST" });
+  const generateProduct = () => generateProductFetcher.submit({}, { method: "POST" });
 
-  const saveCustomField = () => fetcher.submit({
-    id: value,
-  }, { method: "POST" });
+  const saveCustomField = () => saveCustomFieldFetcher.submit({
+    productIds: JSON.stringify(pickedResources),
+    customField: value
+  }, { method: "POST", action: "/api/metafield" });
+
+  useEffect(() => {
+    if (saveCustomFieldFetcher.data) {
+      setShowBanner(true);
+    }
+  }, [saveCustomFieldFetcher.data]);
 
   async function openResourcePicker() {
-    const selectedProducts = await shopify.resourcePicker({ type: 'product', multiple: true });
+    const selectedProducts = await shopify.resourcePicker({ type: 'product' });
 
     const productIds = selectedProducts?.map((p) => p.id);
     console.log('Selected product IDs:', productIds);
@@ -116,26 +131,25 @@ export default function Index() {
         </button>
       </TitleBar>
       <Card>
+        <BlockStack gap="600">
 
-        <BlockStack gap="500">
+          {saveCustomFieldFetcher.data?.error && showBanner && (
+            <Banner tone="critical" title="" onDismiss={() => setShowBanner(false)}>
+              <p>{saveCustomFieldFetcher.data.error}</p>
+            </Banner>
+          )}
+
+          {saveCustomFieldFetcher.data?.message && showBanner && (
+            <Banner tone="success" title="" onDismiss={() => setShowBanner(false)}>
+              <p>{saveCustomFieldFetcher.data.message}</p>
+            </Banner>
+          )}
           <Box maxWidth="200px">
             <Button onClick={openResourcePicker}>
               Select Products
             </Button>
           </Box>
-          <BlockStack gap="200">
-            <TextField
-              maxLength={20}
-              label="Enter Custom value"
-              value={value}
-              onChange={handleChange}
-              autoComplete="off"
-              max={20}
-            />
-            <Box maxWidth="50px">
-              <Button variant="primary" onClick={saveCustomField} loading={fetcher.state == 'submitting'}>Save</Button>
-            </Box>
-          </BlockStack>
+
           {
             pickedResources && (
               <Box
@@ -155,6 +169,23 @@ export default function Index() {
               </Box>
             )
           }
+
+
+          <BlockStack gap="300">
+            <TextField
+              maxLength={20}
+              label="Enter Custom value"
+              placeholder="Custom Value"
+              value={value}
+              onChange={handleChange}
+              autoComplete="off"
+              max={20}
+            />
+
+            <Box maxWidth="50px">
+              <Button variant="primary" onClick={saveCustomField} loading={saveCustomFieldFetcher.state == 'submitting'}>Save</Button>
+            </Box>
+          </BlockStack>
         </BlockStack>
       </Card>
     </Page>
