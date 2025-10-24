@@ -1,0 +1,24 @@
+{{ 'metafield.css' | asset_url | stylesheet_tag }}
+
+{% if product.metafields.custom.my_custom_field %}
+  <div class="custom-field-wrapper">
+    <p class="custom-field-text">
+      {{ product.metafields.custom.my_custom_field.value }}
+    </p>
+  </div>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Metafield Display",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "label",
+      "label": "Label",
+      "default": "Custom field"
+    }
+  ]
+}
+{% endschema %}
