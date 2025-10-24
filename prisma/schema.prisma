@@ -24,3 +24,11 @@ model Session {
   collaborator  Boolean?  @default(false)
   emailVerified Boolean?  @default(false)
 }
+
+model MetafieldLog {
+  id          String   @id @default(cuid())
+  productId   String
+  customValue String
+  createdAt   DateTime @default(now())
+  shop        String
+}
